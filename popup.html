@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Time Tracker</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon48.png" alt="" class="brand-icon" />
+      <h1>Task Timer</h1>
+    </div>
+    <div class="header-actions">
+      <button id="settingsToggle" class="icon-btn ghost" title="Google Sheet settings" aria-label="Settings">&#9881;</button>
+      <button id="addToggle" class="icon-btn" title="Add a new task" aria-label="Add task">
+        <span class="plus">+</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Live date header (requirement 4) -->
+  <section class="date-banner">
+    <div id="enDate" class="en-date">—</div>
+    <div class="date-sub">
+      <span id="bnDate" class="bn-date">—</span>
+      <span class="dot">•</span>
+      <span id="hijriDate" class="hijri-date">—</span>
+    </div>
+  </section>
+
+  <!-- First-launch Google Sheet setup (requirement 1) -->
+  <section id="setupPanel" class="setup-panel hidden">
+    <h2>Connect your Google Sheet</h2>
+    <p class="setup-note">
+      Paste your Google Sheet link, then the Web App URL of the bridge script.
+      (Open the sheet &rarr; Extensions &rarr; Apps Script &rarr; paste
+      <strong>Code.gs</strong> from this extension's folder &rarr; Deploy as
+      Web app &rarr; copy its URL. Full steps are in README.md.)
+    </p>
+    <label class="setup-label" for="sheetUrl">Google Sheet link</label>
+    <input id="sheetUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/…" autocomplete="off" />
+    <label class="setup-label" for="webAppUrl">Apps Script Web App URL</label>
+    <input id="webAppUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" />
+    <div class="setup-actions">
+      <button id="saveConfig" class="btn btn-primary">Save &amp; Connect</button>
+      <button id="cancelConfig" class="btn btn-ghost hidden">Cancel</button>
+    </div>
+    <p id="setupStatus" class="setup-status"></p>
+  </section>
+
+  <!-- Add-task row -->
+  <div id="addRow" class="add-row hidden">
+    <input id="taskName" type="text" placeholder="Task name…" maxlength="60" autocomplete="off" />
+    <button id="addBtn" class="btn btn-primary">Add</button>
+  </div>
+
+  <main>
+    <section id="taskList" class="task-list"></section>
+    <p id="emptyState" class="empty-state hidden">
+      No tasks yet. Click <strong>+</strong> to create one.<br />
+      <span class="muted">Tip: drag cards to reorder.</span>
+    </p>
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-info">
+      <span id="totalTracked" class="total">Total: 00:00:00</span>
+      <span id="syncStatus" class="muted">Not connected</span>
+    </div>
+    <div class="footer-actions">
+      <button id="syncBtn" class="btn btn-ghost sync">&#8635; Sync</button>
+      <button id="exportBtn" class="btn btn-ghost">Export</button>
+      <button id="clearBtn" class="btn btn-ghost danger">Clear All</button>
+    </div>
+  </footer>
+
+  <!-- Generic modal -->
+  <div id="modalOverlay" class="overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true">
+      <p id="modalMessage" class="modal-message"></p>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="zip.js"></script>
+  <script src="sync.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

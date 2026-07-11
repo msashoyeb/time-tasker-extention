@@ -1,204 +1,133 @@
-# Task Time Tracker — Chrome Extension (Manifest V3)
+# Task Time Tracker — Mobile App (PWA + Android APK)
 
-Track time on named tasks with independent Start / Pause / Stop timers, sync
-daily study totals to **your own Google Sheet**, queue data while offline, and
-export the yearly sheet as **Excel (.xlsx)** or **plain text (.txt)**.
+This is the **phone version** of the tracker. It's the same app as the Chrome
+extension, packaged as a **PWA** (a website that installs like an app). From it
+you can either:
 
-Raw timer data lives locally in `chrome.storage.local`. The only network calls
-are to *your* Apps Script (Sheets sync) and AlAdhan (Hijri date refinement).
+- **A)** install it straight to your phone's home screen (no APK, 1 minute), or
+- **B)** turn it into a real **`.apk`** file with a free online tool — **no
+  Android Studio needed**.
+
+> **Why not a ready-made `.apk` in this folder?** Building an `.apk` binary
+> requires Google's Android build tools. The free service **PWABuilder** does
+> that build for you in the browser (step B), so you never install anything on
+> your PC.
 
 ---
 
-## 1 · Install the extension
+## What works on mobile
 
-1. Open `chrome://extensions` in Chrome.
-2. Toggle **Developer mode** on (top-right).
-3. Click **Load unpacked** and select this `task-timer-extension` folder.
-4. Pin the stopwatch icon and click it.
+Everything from the extension: add tasks, Start / Pause / Stop, live HH:MM:SS,
+the English date banner (English + Bengali + Hijri, all in English letters),
+Google Sheet sync, offline queueing, and `.xlsx` / `.txt` export.
 
-## 2 · Connect your Google Sheet (one time, ~3 minutes)
+Two small differences, both handled:
+- Reorder tasks with the **▲ ▼ buttons** on each card (drag-and-drop doesn't
+  work on touchscreens).
+- No hourly background alarm. Instead it **syncs when you open the app**, when
+  you tap **Sync**, and whenever the internet comes back. Open it once a day and
+  everything reaches your sheet.
 
-The extension writes to your sheet through a tiny Apps Script "bridge" that runs
-under your own Google account — no Google Cloud project or OAuth setup needed.
+Your phone's data is stored on the phone (separate from your PC). Both the PC
+extension and the phone app write to the **same Google Sheet**, so the sheet is
+your one combined record.
 
-1. Open your Google Sheet (e.g. `https://docs.google.com/spreadsheets/d/…/edit`).
-2. Menu: **Extensions → Apps Script**. Delete any starter code.
-3. Paste the entire contents of [`apps-script/Code.gs`](apps-script/Code.gs) and save.
-4. Click **Deploy → New deployment**, choose type **Web app**:
-   - *Execute as*: **Me**
-   - *Who has access*: **Anyone with the link**
-5. Click **Deploy**, authorize when Google asks, and **copy the Web app URL**
-   (it ends in `/exec`).
-6. On the extension's first launch it asks for two inputs: paste your **sheet
-   link** and that **Web app URL**, then click **Save & Connect**.
-   (Reopen this screen anytime with the ⚙ button.)
+---
 
-## 3 · How syncing works
+## Step 1 — Put the app online (needed for both A and B)
 
-- Every time you **Stop** a timer, its duration is added to that day's total.
-- **Online**: daily totals upload to the sheet (manual **Sync** button, on
-  popup open if >1 hour has passed, and hourly in the background via
-  `chrome.alarms` even with the popup closed).
-- **Offline**: totals just accumulate locally — for however many days. Once
-  you're back online they all sync, then fully-synced *past* days are cleared
-  locally so each new day starts fresh.
-- **No duplicates**: a day is only sent when its total changed, and the script
-  *updates* an existing day's row instead of appending a second one.
-- Sheet layout (per year, sheet named `2026`, `2027`, … created automatically
-  with a bold header in A1):
+A PWA must be served over **https**. The easiest free way, no accounts, no git:
 
-  | Date | Day | Today (HH:MM:SS) | Net Total (cumulative) | Comment |
-  |------|-----|------------------|------------------------|---------|
-  | 03-Jul-2026 09:45 PM | Friday | 01:30:15 | 05:12:40 | |
+1. Go to **https://app.netlify.com/drop**
+2. Drag this whole **`mobile-app`** folder onto the page.
+3. It gives you a public URL like `https://random-name.netlify.app` — that's
+   your app. (Optional: make a free account to rename it / keep it.)
 
-  - **Net Total** = previous day's net + today, **reset at each new month**.
-  - After a month ends: one blank row, then the month name in bold, then the
-    next month's rows.
-  - If you **delete a row** in the sheet it is *not* recreated — new days keep
-    appending normally (the script remembers synced dates).
-  - The **Comment** column is never touched by sync — your notes survive.
-  - On Jan 1 the next year's sheet is created automatically with its header.
+*(Alternatives: GitHub Pages, Cloudflare Pages, Vercel — any static host works.
+Whatever you use, the folder's files must sit at the site root so
+`manifest.webmanifest` and `service-worker.js` are reachable.)*
 
-## 4 · Popup features
+---
 
-- **Date banner** — live English date/time (AM/PM) and day, plus the Bengali
-  calendar and Hijri dates **written in English** (e.g. `19 Asharh 1433 BS` and
-  `18 Muharram 1448 AH`; computed locally, refined from the AlAdhan API online).
-- **+** — add a task; each card has **Start / Pause / Stop** (Stop asks for
-  confirmation and permanently logs the session).
-- **One task at a time** — starting a task automatically pauses whichever task
-  was running, so time is never counted twice.
-- **Recurring (↻)** — click the circular arrow on a card to make it recurring.
-  Recurring tasks carry over to the next day; non-recurring tasks are removed
-  when the day changes (see *Business logic* below).
-- Cards are color-coded: green = running, amber = paused, grey = idle/stopped.
-- **Drag a card** to reorder tasks.
-- **Sync** — sync to the sheet immediately; the footer shows pending days /
-  last sync time.
-- **Export** — downloads *this year's Google Sheet data* (not raw local data)
-  as `.xlsx` or `.txt`, in AM/PM time format. Requires internet.
-- **Clear All** — removes all tasks and local session history (with
-  confirmation). Unsynced daily totals are kept so no sheet data is lost.
+## Step 2A — Install as an app (no APK)
 
-## 5 · Business logic (the rules, in plain words)
+On your Android phone, open that URL in **Chrome**:
+1. Tap the **⋮** menu → **Add to Home screen** (or **Install app**).
+2. Confirm. A "Task Timer" icon appears on your home screen and opens
+   full-screen like a normal app, and it works offline.
 
-These are the rules the app follows. Nothing here is hidden — it all lives in
-`popup.js` (extension) and `netlify-web-app/app.js` (web app), which share the
-same logic.
+*(iPhone: open in Safari → Share → Add to Home Screen.)*
 
-**A task and its timer**
+For many people this is enough and you can stop here.
 
-- A task is just a name with a clock. Each clock has one of four states:
-  **idle** (never started), **running**, **paused**, **stopped**.
-- **Start** runs the clock. **Pause** freezes it (you can resume). **Stop**
-  ends the session for good and writes it to the local history log.
-- Time is measured from real timestamps (`accumulated + (now − start)`), not a
-  ticking counter — so closing the popup or restarting the browser never loses
-  or skews time.
-- **Only one task runs at a time.** Starting a task auto-pauses any other
-  running task, so the same minute is never counted twice.
+---
 
-**Daily total (what actually syncs to your sheet)**
+## Step 2B — Make a real `.apk` with PWABuilder (no Android Studio)
 
-- Every day has one total. A task's time is added to that total the moment the
-  time is "banked".
-- Time is banked when you press **Stop**, and also automatically **before a task
-  is removed** — whether it is running or paused, recurring or not — so time on
-  the clock is never thrown away.
-- Banked time counts toward the day the session **started** (`sessionStart`). A
-  timer running across midnight is credited to the day it began.
+1. Go to **https://www.pwabuilder.com**
+2. Paste your Netlify URL and click **Start**. It checks the manifest / service
+   worker (this app already includes both, so it should score well).
+3. Click **Package for stores → Android**.
+4. Choose the package options:
+   - For a phone you'll **sideload** (install directly), you can turn **off**
+     "Signing" or let PWABuilder generate a signing key — either works for
+     personal use. Keep the generated `signing.keystore` + passwords if you ever
+     want to update the app later or publish to Google Play.
+5. Click **Download**. You get a `.zip` containing an **`.apk`** (for direct
+   install) and an `.aab` (for the Play Store).
 
-**Recurring tasks (↻) and the day change**
+### Install the `.apk` on your phone
+1. Copy the `.apk` to your phone (USB, Google Drive, email to yourself, etc.).
+2. Tap it. Android will ask to allow installing from this source →
+   **Settings → Install unknown apps → allow** for the app you're installing from
+   (e.g. Files or Chrome).
+3. Install. The app icon appears in your app drawer like any other app.
 
-When the calendar day changes (checked when you open the app, and every second
-while it stays open):
+> **Note:** an APK made this way is a thin wrapper around your hosted PWA
+> (a "Trusted Web Activity"). It still loads from your URL, so keep the site up.
+> Offline still works because the service worker caches the app on the phone.
 
-- **Recurring task (↻ on):** it stays for the new day. Any time on its clock is
-  first counted toward the *previous* day's total, then the clock is **reset to
-  00:00:00** for the new day.
-- **Non-recurring task (↻ off):** it is **removed completely**. Any time on its
-  clock is still counted toward the previous day's total first, then it's gone.
-- In short: **recurring = keep and reset to zero each day; non-recurring = one
-  day only.** Either way, time already spent is never lost.
+### Optional — publish to the Google Play Store
+The downloaded package includes the `.aab` and instructions. You'd need a
+one-time **$25** Google Play developer account, then upload the `.aab`. For
+personal use, the sideloaded `.apk` from the step above is enough and free.
 
-**Syncing to Google Sheets**
+---
 
-- **When:** on demand (the **Sync** button), when you open the popup if it's been
-  over 1 hour since the last sync, once an hour in the background (extension
-  only, via `chrome.alarms`), and the moment the internet reconnects.
-- **Offline:** totals pile up locally for as many days as needed; they all sync
-  once you're back online, then fully-synced *past* days are cleared locally.
-- **No duplicates:** a day is only sent if its total changed, and the Apps
-  Script *updates* that day's existing row instead of adding a second one.
-- Your **Comment** column and any row you delete in the sheet are left alone.
+## Google Sheet setup (same as the extension)
 
-## Files
+First launch shows the setup screen. You need the **same two values** as the
+PC extension:
+1. Your Google Sheet link.
+2. The Apps Script **Web App URL** (`…/exec`).
+
+If you already set up the Apps Script bridge for the extension (see the main
+[`../README.md`](../README.md)), just reuse that same URL here — no new setup.
+Make sure the deployment's access is **"Anyone with the link"** so the phone can
+reach it.
+
+---
+
+## Files in this folder
 
 | File | Purpose |
 |------|---------|
-| `manifest.json` | MV3 manifest (`storage`, `downloads`, `alarms`; host access to script.google.com + api.aladhan.com). |
-| `popup.html` / `popup.css` / `popup.js` | Popup UI: timers, date banner, setup, drag & drop, export. |
-| `sync.js` | Shared sync engine (offline queue, dedupe) used by popup **and** background worker. |
-| `background.js` | Service worker: storage init + hourly auto-sync alarm. |
-| `zip.js` | Dependency-free ZIP/XLSX writer (real Excel files, CSP-safe). |
-| `apps-script/Code.gs` | The Sheets bridge you paste into Apps Script. |
-| `icons/` | 16 / 48 / 128 px stopwatch icons. |
-
-## Accuracy across restarts
-
-Timing is **timestamp-based**: elapsed time is always computed as
-`accumulated + (now − segmentStart)` from `chrome.storage.local`, so closing
-the popup or restarting Chrome never loses or skews time. `setInterval` only
-repaints the on-screen digits.
-
-## Publishing to the Chrome Web Store
-
-A ready-to-upload package is in `store-package/task-time-tracker-v2.0.0.zip`
-(it contains only the extension files — no docs or the Apps Script source).
-
-1. **Developer account** — go to
-   [chrome.google.com/webstore/devconsole](https://chrome.google.com/webstore/devconsole),
-   sign in with your Google account, and pay the **one-time $5** registration fee.
-2. **New item** — click **+ New item** and upload the ZIP.
-3. **Store listing tab** — fill in:
-   - Description (what it does, in plain words).
-   - Category: *Productivity → Tools*.
-   - At least **one screenshot, 1280×800 or 640×400 px** (open the popup, zoom
-     if needed, and screenshot it on a neutral background).
-   - The 128×128 icon is taken from the ZIP automatically.
-4. **Privacy tab** — this is what reviewers check hardest:
-   - *Single purpose*: "Tracks time spent on user-named tasks and logs daily
-     totals to the user's own Google Sheet."
-   - *Permission justifications*:
-     - `storage` — save timers and history locally.
-     - `downloads` — let the user download their export file.
-     - `alarms` — hourly background sync to the user's sheet.
-     - `script.google.com` / `script.googleusercontent.com` — send data to the
-       user's own Apps Script bridge.
-     - `api.aladhan.com` — fetch the Hijri (Islamic) date for the header.
-   - *Data usage*: tick that data is **not** sold / not used for unrelated
-     purposes. All user data goes only to the user's own Google Sheet.
-   - You need a **privacy policy URL** because the extension has host
-     permissions. A one-page Google Doc (set to "anyone with link") saying the
-     extension stores data locally and only sends it to the user's own sheet
-     is acceptable.
-5. **Distribution tab** — Public (or Unlisted, if it's just for you — unlisted
-   skips no review but hides it from search).
-6. **Submit for review** — first review typically takes a few days. Extensions
-   with host permissions get a closer look; the justifications above cover it.
-
-**Updating later**: bump `"version"` in `manifest.json` (e.g. `2.0.1`), rebuild
-the ZIP, upload it on the same item, submit again.
-
-**Tip**: if the extension is only for yourself, you can skip the store entirely
-and keep using **Load unpacked** — it works permanently in Developer mode.
+| `index.html` | The mobile page (same layout as the extension popup). |
+| `styles.css` | Responsive, full-screen, finger-friendly styling. |
+| `app.js` | The app logic (same as the extension, + ▲▼ reorder). |
+| `sync.js` | Google Sheet sync engine (shared, unchanged). |
+| `zip.js` | Excel/ZIP writer (shared, unchanged). |
+| `chrome-shim.js` | Tiny bridge so the extension code runs in a plain browser. |
+| `manifest.webmanifest` | PWA manifest — makes it installable. |
+| `service-worker.js` | Offline caching + installability. |
+| `icons/` | App icons incl. 192 / 512 / maskable for Android. |
 
 ## Troubleshooting
 
-- **"Couldn't reach the script"** during setup → re-check the URL ends in
-  `/exec` and the deployment's access is *Anyone with the link*. After editing
-  Code.gs you must create a **new deployment version** (Deploy → Manage
-  deployments → ✏ → New version).
-- **Rows not appearing** → click **Sync** and watch the footer status; days
-  already synced only re-send when their total grows.
-- **Wrong sheet** → the sheet ID comes from the link you pasted; update it via ⚙.
+- **"Add to Home screen" / Install option is missing** → the site must be
+  **https** and `manifest.webmanifest` + `service-worker.js` must load. Netlify
+  Drop gives https automatically. Reload once after first visit.
+- **Sync fails on mobile** → confirm the Apps Script deployment access is
+  "Anyone with the link". Your data stays saved locally and re-sends next time.
+- **Changed a file?** → bump `CACHE_VERSION` in `service-worker.js`, re-upload,
+  and reopen the app so the phone fetches the new version.
